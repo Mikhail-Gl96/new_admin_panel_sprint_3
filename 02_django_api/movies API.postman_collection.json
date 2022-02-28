@@ -305,7 +305,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Установка UUID\", function () {",
+							"pm.test(\"Устаноска UUID\", function () {",
 							"    pm.sendRequest(\"127.0.0.1:8000/api/v1/movies/\", function (err, response) {",
 							"      var jsonData = response.json();",
 							"      postman.setEnvironmentVariable(\"movieUuid\", jsonData.results[0].id);",
