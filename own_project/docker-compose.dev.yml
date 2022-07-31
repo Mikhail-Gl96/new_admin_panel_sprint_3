@@ -12,6 +12,8 @@ services:
       NAME: "django_app"
     volumes:
       - app_static_volume:/opt/app/static
+    ports:
+      - '8000:8000'
     depends_on:
       - postgres
     networks:
@@ -39,11 +41,28 @@ services:
         ci/postgres/Dockerfile
     env_file:
       - ci/postgres/.env
+    ports:
+      - "5435:5432"
     volumes:
       - $HOME/postgresql-compose-edition/data:/var/lib/postgresql/data
       - ./sqlite_to_postgres/movies_database.sql:/docker-entrypoint-initdb.d/movies_database.sql
+    #      Не работает почему-то в контейнере такой запуск скрипта (вроде все по доке делал)
     networks:
       - internal
+      - external_network
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    labels:
+      NAME: 'api-swagger'
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./postman/openapi.yaml:/swagger.yaml
+    environment:
+      - SWAGGER_JSON=/swagger.yaml
+    depends_on:
+      - app
 
 
 networks:

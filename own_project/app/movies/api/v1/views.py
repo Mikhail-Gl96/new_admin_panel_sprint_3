@@ -3,9 +3,8 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.generic.detail import BaseDetailView
 from django.views.generic.list import BaseListView
-from movies.models import Filmwork
-
 from movies.api_models.response import MovieResponse, Movie
+from movies.models import Filmwork, PersonFilmwork
 
 
 class MoviesApiMixin:
@@ -20,37 +19,29 @@ class MoviesApiMixin:
         )
 
     def get_queryset(self):
-        return Filmwork.objects.values().annotate(
-            actors=self._aggregate_person('actor'),
-            directors=self._aggregate_person('director'),
-            writers=self._aggregate_person('writer'),
-            genres=ArrayAgg(
+        return Filmwork.objects.annotate(
+            actors=self._aggregate_person(
+                PersonFilmwork.RoleTypes.actor),
+            directors=self._aggregate_person(
+                PersonFilmwork.RoleTypes.director),
+            writers=self._aggregate_person(
+                PersonFilmwork.RoleTypes.writer)
+        ).values(
+            'id',
+            'title',
+            'description',
+            'creation_date',
+            'rating',
+            'type',
+            'actors',
+            'directors',
+            'writers',
+            genre=ArrayAgg(
                 'genres__name',
                 filter=Q(genres__name__isnull=False),
                 distinct=True
             )
         )
-        # Альтернативный вариант, с явным указанием полей (ничего лишнего)
-        # return Filmwork.objects.annotate(
-        #     actors=_aggregate_person('actor'),
-        #     directors=_aggregate_person('director'),
-        #     writers=_aggregate_person('writer')
-        # ).values(
-        #     'id',
-        #     'title',
-        #     'description',
-        #     'creation_date',
-        #     'rating',
-        #     'type',
-        #     'actors',
-        #     'directors',
-        #     'writers',
-        #     genres=ArrayAgg(
-        #         'genres__name',
-        #         filter=Q(genres__name__isnull=False),
-        #         distinct=True
-        #     )
-        # )
 
     def render_to_response(self, context, **response_kwargs):
         return JsonResponse(context)

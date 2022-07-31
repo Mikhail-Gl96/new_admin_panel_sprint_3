@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional, List
 from uuid import UUID
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Field
 
 
 class Movie(BaseModel):
@@ -12,7 +12,7 @@ class Movie(BaseModel):
     creation_date: date
     rating: Optional[float]
     type: str
-    genres: List[str]
+    genres: List[str] = Field(alias='genre')
     actors: List[str]
     directors: List[str]
     writers: List[str]
