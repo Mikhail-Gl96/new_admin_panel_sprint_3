@@ -1,0 +1,2 @@
+ARG IMAGE_NAME="postgres:13"
+FROM ${IMAGE_NAME}
