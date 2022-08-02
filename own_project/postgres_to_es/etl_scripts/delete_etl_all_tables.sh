@@ -1,0 +1,1 @@
+curl --location --request DELETE 'http://localhost:9200/_all'

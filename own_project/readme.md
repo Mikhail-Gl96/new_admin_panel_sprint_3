@@ -59,6 +59,18 @@ echo "from django.contrib.auth.models import User; User.objects.create_superuser
 
 Or run script: `setup_scripts/create_django_super_user.sh`
 
+
+# Elastic
+
+## Run elastic in compose
+
+Docker run
+```shell
+docker run -p 9200:9200 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms200m -Xmx200m" docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+```
+Already included in project docker-compose file
+
+
 ## Help
 
 If port is already in use - kill it. <br>
