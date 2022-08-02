@@ -64,6 +64,37 @@ services:
     depends_on:
       - app
 
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+    labels:
+      NAME: 'Elastic-search'
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+#     if low memory and cpu - use settings ES_JAVA_OPTS
+#      - ES_JAVA_OPTS=-Xms200m -Xmx200m
+    depends_on:
+      - postgres
+    networks:
+      - internal
+      - external_network
+
+  postgres-es-etl:
+    build:
+      context: .
+      dockerfile:
+        ci/etl_service/Dockerfile
+    env_file:
+      - ci/etl_service/.env
+    labels:
+      NAME: "etl_service"
+    depends_on:
+      - app
+      - postgres
+      - elastic
+    networks:
+      - internal
 
 networks:
   external_network: { }
