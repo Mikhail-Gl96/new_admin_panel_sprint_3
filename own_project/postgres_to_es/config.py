@@ -1,23 +1,29 @@
 import os
 
-from dotenv import load_dotenv
+from models.config import ESSettings, EtlSettings
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+index_name = ESSettings().index
 
-load_dotenv(dotenv_path)
+_etl_settings = EtlSettings()
 
-index_name = os.getenv('ELASTIC_INDEX', 'movies')
+batch_size = _etl_settings.batch_size
+es_request_timeout = _etl_settings.es_request_timeout
+etl_sync_time_every_seconds = _etl_settings.etl_sync_time_every_seconds
 
-batch_size = int(os.getenv('BATCH_SIZE', 100))
-es_request_timeout = int(os.getenv('ES_REQUEST_TIMEOUT', 300))
-etl_sync_time_every_seconds = int(os.getenv('ETL_SYNC_TIME_EVERY_SECONDS', 10))
+last_state_key = _etl_settings.last_state_key
 
-logger_level = os.getenv('LOGGER_LEVEL', 'INFO')
+os.makedirs(_etl_settings.static_path_name, exist_ok=True)
+state_file_path = os.path.abspath(
+    os.path.join(
+        _etl_settings.static_path_name,
+        _etl_settings.state_file_name
+    )
+)
 
-last_state_key = 'last_update'
-
-os.makedirs('state', exist_ok=True)
-state_file_path = os.path.abspath(os.path.join('state', 'last_state.json'))
-
-os.makedirs('static', exist_ok=True)
-es_schema_path = os.path.abspath(os.path.join('static', 'es_schema.json'))
+os.makedirs(_etl_settings.static_path_name, exist_ok=True)
+es_schema_path = os.path.abspath(
+    os.path.join(
+        _etl_settings.static_path_name,
+        _etl_settings.es_schema_file_name
+    )
+)

@@ -1,14 +1,12 @@
 import datetime
-import logging
 from typing import List
 
 from elasticsearch.client import Elasticsearch
 
 from config import es_schema_path, last_state_key
 from utils.backoff import backoff
+from utils.logger import logger
 from utils.state import State
-
-logger = logging.getLogger(__name__)
 
 
 class ESLoader:

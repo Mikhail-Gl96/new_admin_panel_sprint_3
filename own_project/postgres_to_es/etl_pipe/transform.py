@@ -1,11 +1,9 @@
-import logging
 from typing import List
 
 from config import index_name
 from models.data import Movie
 from utils.backoff import backoff
-
-logger = logging.getLogger(__name__)
+from utils.logger import logger
 
 
 class PGToESTransformer:

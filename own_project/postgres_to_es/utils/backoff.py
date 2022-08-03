@@ -1,9 +1,8 @@
-import logging
 from functools import wraps
 from time import sleep
 from typing import Callable
 
-logger = logging.getLogger(__name__)
+from utils.logger import logger
 
 
 def backoff(

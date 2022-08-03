@@ -1,13 +1,11 @@
 import datetime
-import logging
 from typing import Generator
 
 from psycopg2.extensions import connection
 
 from utils.backoff import backoff
+from utils.logger import logger
 from utils.sql_query import all_data_query
-
-logger = logging.getLogger(__name__)
 
 
 class PostgresExtractor:
@@ -27,12 +25,8 @@ class PostgresExtractor:
         :return: генератор с записями
         """
 
-        try:
-            with self.connection.cursor() as cursor:
-                cursor.execute(all_data_query % last_update_time)
+        with self.connection.cursor() as cursor:
+            cursor.execute(all_data_query % last_update_time)
 
-                while data := cursor.fetchmany(self.limit):
-                    yield data
-
-        except Exception as error:
-            logger.error(error)
+            while data := cursor.fetchmany(self.limit):
+                yield data
