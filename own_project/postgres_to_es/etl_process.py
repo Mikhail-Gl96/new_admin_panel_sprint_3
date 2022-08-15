@@ -1,3 +1,4 @@
+import os.path
 import time
 from contextlib import contextmanager
 
@@ -7,7 +8,8 @@ from elasticsearch.client import Elasticsearch
 from psycopg2.extensions import connection
 
 from config import (
-    index_name,
+    index_names,
+    es_schema_path,
     state_file_path,
     last_state_key,
     batch_size,
@@ -18,36 +20,74 @@ from etl_pipe.extract import PostgresExtractor
 from etl_pipe.load import ESLoader
 from etl_pipe.transform import PGToESTransformer
 from models.config import ESSettings, PostgresSettings
+from models.data import EsIndexes
 from utils.backoff import backoff
 from utils.logger import logger
 from utils.state import JsonFileStorage, State
 
 
+def operations_index_not_exists(
+        loader: ESLoader,
+        state: State,
+        index_name: EsIndexes
+):
+    logger.info(f'No index <{index_name}>. Try to create one.')
+    # Я бы оставил, тк индекс может быть затерт (случай, конечно, нестандартный).
+    # Если во время сканирования поймем, что индекса нет - пересоздадим.
+    # И стейт почистим, чтобы все загрузить заново. Либо нужно создавать отд процесс (демон, сервис),
+    # который будет следить за состоянием накачки данных и сохранностью индексов.
+    loader.create_index()
+    logger.info(f'Index <{index_name}> created. Start clear state.')
+    state.set_state(last_state_key, None)
+    logger.info('State cleared')
+
+
+def run_etl_process_per_index(
+        pg_conn: connection,
+        es_conn: Elasticsearch,
+        index_name: EsIndexes,
+        state_file_path: str
+):
+    storage = JsonFileStorage(state_file_path)
+    state = State(storage)
+    extractor = PostgresExtractor(
+        conn=pg_conn,
+        batch_size=batch_size,
+        index_name=index_name
+    )
+    transformer = PGToESTransformer(index_name=index_name)
+    es_schema_path_by_index = os.path.join(es_schema_path, f'{index_name}.json')
+    loader = ESLoader(
+        connection=es_conn,
+        index_name=index_name,
+        es_schema_path=es_schema_path_by_index
+    )
+
+    if not es_conn.indices.exists(index=index_name):
+        operations_index_not_exists(
+            loader=loader,
+            state=state,
+            index_name=index_name
+        )
+
+    last_update_time = state.get_state(last_state_key)
+    pg_data = extractor.get_data(last_update_time)
+
+    for batch in pg_data:
+        entries = transformer.compile_data(batch)
+        loader.bulk_create(entries, state)
+
+
 def main() -> None:
     with closing_es(connect_es()) as es_conn, closing(connect_postgres()) as pg_conn:
-        storage = JsonFileStorage(state_file_path)
-        state = State(storage)
-        extractor = PostgresExtractor(pg_conn, batch_size)
-        transformer = PGToESTransformer()
-        loader = ESLoader(es_conn, index_name)
-
-        if not es_conn.indices.exists(index=index_name):
-            logger.info(f'No index <{index_name}>. Try to create one.')
-            # Я бы оставил, тк индекс может быть затерт (случай, конечно, нестандартный).
-            # Если во время сканирования поймем, что индекса нет - пересоздадим.
-            # И стейт почистим, чтобы все загрузить заново. Либо нужно создавать отд процесс (демон, сервис),
-            # который будет следить за состоянием накачки данных и сохранностью индексов.
-            loader.create_index()
-            logger.info(f'Index <{index_name}> created. Start clear state.')
-            state.set_state(last_state_key, None)
-            logger.info('State cleared')
-
-        last_update_time = state.get_state(last_state_key)
-        pg_data = extractor.get_data(last_update_time)
-
-        for batch in pg_data:
-            entries = transformer.compile_data(batch)
-            loader.bulk_create(entries, state)
+        for _index_name in index_names:
+            _state_file_path = os.path.join(state_file_path, f'last_state_{_index_name}.json')
+            run_etl_process_per_index(
+                pg_conn=pg_conn,
+                es_conn=es_conn,
+                index_name=_index_name,
+                state_file_path=_state_file_path
+            )
 
 
 @contextmanager

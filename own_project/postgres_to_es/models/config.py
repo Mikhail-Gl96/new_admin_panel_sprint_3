@@ -1,4 +1,6 @@
-from pydantic import BaseSettings, Field
+from typing import List, Optional, Union
+
+from pydantic import BaseSettings, Field, validator
 
 
 class PostgresSettings(BaseSettings):
@@ -16,7 +18,16 @@ class PostgresSettings(BaseSettings):
 
 class ESSettings(BaseSettings):
     host: str = Field(..., env='ELASTIC_HOST')
-    index: str = Field(env='ELASTIC_INDEX', default='movies')
+    indexes: Union[str, List[str]] = Field(env='ELASTIC_INDEX')
+
+    @validator('indexes', pre=True)
+    def load_indexes_as_list(cls, v: Optional[str]) -> Optional[List[str]]:
+        if v and isinstance(v, str):
+            return [_ for _ in v.split(',') if _]
+        elif v:
+            raise ValueError('Incorrect indexes value')
+        else:
+            return None
 
     class Config:
         env_file = '.env'
@@ -38,9 +49,7 @@ class EtlSettings(BaseSettings):
     last_state_key: str = 'last_update'
 
     state_path_name: str = Field(env='STATE_PATH_NAME', default='state')
-    state_file_name: str = Field(env='STATE_FILE_NAME', default='last_state.json')
-    static_path_name: str = Field(env='STATIC_PATH_NAME', default='static')
-    es_schema_file_name: str = Field(env='ES_SCHEMA_FILE_NAME', default='es_schema.json')
+    static_path_name: str = Field(env='STATIC_PATH_NAME', default='static/es_schemas')
 
     class Config:
         env_file = '.env'
