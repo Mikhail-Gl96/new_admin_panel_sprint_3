@@ -1,1 +1,1 @@
-PGPASSWORD=123qwe psql -h 0.0.0.0 -p 5435 -U app -d movies_database -f movies_database.sql
+PGPASSWORD=123qwe psql -h 0.0.0.0 -p 5432 -U app -d movies_database -f movies_database.sql

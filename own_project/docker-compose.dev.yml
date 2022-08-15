@@ -42,7 +42,7 @@ services:
     env_file:
       - ci/postgres/.env
     ports:
-      - "5435:5432"
+      - "5432:5432"
     volumes:
       - $HOME/postgresql-compose-edition/data:/var/lib/postgresql/data
       - ./sqlite_to_postgres/movies_database.sql:/docker-entrypoint-initdb.d/movies_database.sql

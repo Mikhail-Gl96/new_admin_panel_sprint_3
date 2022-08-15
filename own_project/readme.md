@@ -11,7 +11,7 @@ docker-compose down && docker-compose build --no-cache && docker-compose up
 ## Create DB tables if not exists
 
 ```shell
-PGPASSWORD=123qwe psql -h 0.0.0.0 -p 5435 -U app -d movies_database -f movies_database.sql
+PGPASSWORD=123qwe psql -h 0.0.0.0 -p 5432 -U app -d movies_database -f movies_database.sql
 ```
 
 Or run script: `setup_scripts/create_db.sh`
