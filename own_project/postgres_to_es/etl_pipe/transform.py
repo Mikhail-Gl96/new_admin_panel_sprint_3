@@ -1,14 +1,20 @@
-from typing import List
+from typing import List, Callable
 
-from etl_pipe.etl_entities_mapping import etl_entities_mapper
 from models.data import Movie, EsIndexes
 from utils.backoff import backoff
 from utils.logger import logger
 
 
 class PGToESTransformer:
-    def __init__(self, index_name: EsIndexes):
+    def __init__(
+            self,
+            index_name: EsIndexes,
+            entry_template_func: Callable,
+            entry_prepare_func: Callable
+    ) -> None:
+        self.entry_template_func = entry_template_func
         self.index_name = index_name
+        self.entry_prepare_func = entry_prepare_func
 
     @backoff(logger=logger)
     def prepare_entries(self, data: List[tuple]) -> List[Movie]:
@@ -18,7 +24,7 @@ class PGToESTransformer:
         :param data: список записей для обработки
         :return: список объектов модели Movie
         """
-        return etl_entities_mapper.get(self.index_name).prepare(data=data)
+        return self.entry_prepare_func(data=data)
 
     @backoff(logger=logger)
     def compile_data(self, data: List[tuple]) -> List[dict]:
@@ -38,7 +44,7 @@ class PGToESTransformer:
                     "_id": str(entry.id)
                 }
             }
-            entry_template = etl_entities_mapper.get(self.index_name).entry_template(entry=entry)
+            entry_template = self.entry_template_func(entry=entry)
             out.append(index_template)
             out.append(entry_template)
 

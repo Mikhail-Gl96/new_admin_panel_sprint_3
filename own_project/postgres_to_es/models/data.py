@@ -12,7 +12,7 @@ class EsIndexes(str, Enum):
     persons_full = 'persons_full'
 
     @staticmethod
-    def members():
+    def members() -> list:
         return list(EsIndexes)
 
 
@@ -66,32 +66,28 @@ class Movie(BaseModel):
         return v
 
     @staticmethod
-    def validate_person_list(v: list):
+    def validate_id_name_list(v: list) -> None:
         if v:
             for i in v:
                 IdNameMixin(**i)
 
     @validator('imdb_rating')
-    def valid_imdb_rating(cls, v: Optional[Any]):
+    def valid_imdb_rating(cls, v: Optional[Any]) -> Optional[Any]:
         return cls._return_default_if_empty(v, 0)
 
     @validator('description')
-    def valid_description(cls, v: Optional[Any]):
+    def valid_description(cls, v: Optional[Any]) -> Optional[Any]:
         return cls._return_default_if_empty(v, '')
 
     @validator('director')
-    def valid_director(cls, v: Optional[Any]):
+    def valid_director(cls, v: Optional[Any]) -> Optional[Any]:
         return cls._return_default_if_empty(v, [])
 
     @validator('actors', 'writers', 'genres')
-    def valid_actors(cls, v: Optional[Any]):
-        cls.validate_person_list(v)
+    def valid_persons_entities(cls, v: Optional[Any]) -> Optional[Any]:
+        cls.validate_id_name_list(v)
         return cls._return_default_if_empty(v, [])
 
-    @validator('actors_names')
-    def valid_actors_names(cls, v: Optional[Any]):
-        return cls._return_default_if_empty(v, [])
-
-    @validator('writers_names')
-    def valid_writers_names(cls, v: Optional[Any]):
+    @validator('actors_names', 'writers_names')
+    def valid_entities_with_names(cls, v: Optional[Any]) -> Optional[Any]:
         return cls._return_default_if_empty(v, [])

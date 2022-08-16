@@ -1,6 +1,7 @@
 import os.path
 import time
 from contextlib import contextmanager
+from typing import Generator
 
 import elasticsearch
 import psycopg2
@@ -16,6 +17,7 @@ from config import (
     es_request_timeout,
     etl_sync_time_every_seconds
 )
+from etl_pipe.etl_entities_mapping import etl_entities_mapper
 from etl_pipe.extract import PostgresExtractor
 from etl_pipe.load import ESLoader
 from etl_pipe.transform import PGToESTransformer
@@ -30,12 +32,8 @@ def operations_index_not_exists(
         loader: ESLoader,
         state: State,
         index_name: EsIndexes
-):
+) -> None:
     logger.info(f'No index <{index_name}>. Try to create one.')
-    # Я бы оставил, тк индекс может быть затерт (случай, конечно, нестандартный).
-    # Если во время сканирования поймем, что индекса нет - пересоздадим.
-    # И стейт почистим, чтобы все загрузить заново. Либо нужно создавать отд процесс (демон, сервис),
-    # который будет следить за состоянием накачки данных и сохранностью индексов.
     loader.create_index()
     logger.info(f'Index <{index_name}> created. Start clear state.')
     state.set_state(last_state_key, None)
@@ -47,15 +45,25 @@ def run_etl_process_per_index(
         es_conn: Elasticsearch,
         index_name: EsIndexes,
         state_file_path: str
-):
+) -> None:
     storage = JsonFileStorage(state_file_path)
     state = State(storage)
+
+    sql_query = etl_entities_mapper.get(index_name).sql_query
     extractor = PostgresExtractor(
         conn=pg_conn,
         batch_size=batch_size,
-        index_name=index_name
+        sql_query=sql_query
     )
-    transformer = PGToESTransformer(index_name=index_name)
+
+    entry_template_func = etl_entities_mapper.get(index_name).entry_template
+    entry_prepare_func = etl_entities_mapper.get(index_name).prepare
+    transformer = PGToESTransformer(
+        index_name=index_name,
+        entry_template_func=entry_template_func,
+        entry_prepare_func=entry_prepare_func
+    )
+
     es_schema_path_by_index = os.path.join(es_schema_path, f'{index_name}.json')
     loader = ESLoader(
         connection=es_conn,
@@ -91,7 +99,7 @@ def main() -> None:
 
 
 @contextmanager
-def closing(smth):
+def closing(smth) -> Generator:
     try:
         yield smth
     finally:
@@ -99,7 +107,7 @@ def closing(smth):
 
 
 @contextmanager
-def closing_es(es_client):
+def closing_es(es_client) -> Generator:
     try:
         yield es_client
     finally:

@@ -3,8 +3,6 @@ from typing import Generator
 
 from psycopg2.extensions import connection
 
-from etl_pipe.etl_entities_mapping import etl_entities_mapper
-from models.data import EsIndexes
 from utils.backoff import backoff
 from utils.logger import logger
 
@@ -14,12 +12,11 @@ class PostgresExtractor:
             self,
             conn: connection,
             batch_size: int,
-            index_name: EsIndexes
+            sql_query: str
     ) -> None:
         self.connection = conn
         self.limit = batch_size
-        self.index_name = index_name
-        self.sql_query = etl_entities_mapper.get(self.index_name).sql_query
+        self.sql_query = sql_query
 
     @backoff(logger=logger)
     def get_data(
