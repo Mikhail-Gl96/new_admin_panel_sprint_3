@@ -1,7 +1,7 @@
 all_data_query = """
         SELECT fw.id,
         fw.rating AS imdb_rating,
-        ARRAY_AGG(DISTINCT g.name) AS genre,
+        JSON_AGG(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) AS genres,
         fw.title,
         fw.description,
         ARRAY_AGG(DISTINCT p.full_name)
@@ -22,3 +22,33 @@ all_data_query = """
         WHERE GREATEST(fw.modified, p.modified, g.modified) > '%s'
         GROUP BY fw.id;
         """
+
+all_persons = """
+        SELECT p.id,
+        p.full_name
+        FROM person p
+        LEFT OUTER JOIN person_film_work pfw ON (p.id = pfw.person_id)
+        WHERE GREATEST(p.modified, p.modified) > '%s'
+        GROUP BY p.id;
+    """
+
+all_detail_persons = """
+        SELECT p.id,
+        p.full_name,
+        ARRAY_AGG(DISTINCT pfw.film_work_id)
+        FILTER(WHERE pfw.person_id = p.id) AS film_ids,
+        ARRAY_AGG(DISTINCT pfw.role)
+        FILTER(WHERE pfw.person_id = p.id) AS roles
+        FROM person p
+        LEFT OUTER JOIN person_film_work pfw ON (p.id = pfw.person_id)
+        WHERE GREATEST(p.modified, p.modified) > '%s'
+        GROUP BY p.id;
+    """
+
+all_genres = """
+        SELECT g.id,
+        g.name
+        FROM genre g
+        WHERE g.modified > '%s'
+        GROUP BY g.id;
+    """

@@ -1,12 +1,21 @@
-from typing import List
+from typing import List, Callable
 
-from config import index_name
-from models.data import Movie
+from models.data import Movie, EsIndexes
 from utils.backoff import backoff
 from utils.logger import logger
 
 
 class PGToESTransformer:
+    def __init__(
+            self,
+            index_name: EsIndexes,
+            entry_template_func: Callable,
+            entry_prepare_func: Callable
+    ) -> None:
+        self.entry_template_func = entry_template_func
+        self.index_name = index_name
+        self.entry_prepare_func = entry_prepare_func
+
     @backoff(logger=logger)
     def prepare_entries(self, data: List[tuple]) -> List[Movie]:
         """
@@ -15,22 +24,7 @@ class PGToESTransformer:
         :param data: список записей для обработки
         :return: список объектов модели Movie
         """
-        entries = []
-        for idx, rating, genre, title, descr, director, actors_n, writers_n, actors, writers in data:
-            entry = Movie(
-                id=idx,
-                imdb_rating=rating,
-                genre=genre,
-                title=title,
-                description=descr,
-                director=director,
-                actors=actors,
-                writers=writers,
-                actors_names=actors_n,
-                writers_names=writers_n
-            )
-            entries.append(entry)
-        return entries
+        return self.entry_prepare_func(data=data)
 
     @backoff(logger=logger)
     def compile_data(self, data: List[tuple]) -> List[dict]:
@@ -46,22 +40,11 @@ class PGToESTransformer:
         for entry in entries:
             index_template = {
                 "index": {
-                    "_index": index_name,
+                    "_index": self.index_name,
                     "_id": str(entry.id)
                 }
             }
-            entry_template = {
-                "id": str(entry.id),
-                "imdb_rating": entry.imdb_rating,
-                "genre": entry.genre,
-                "title": entry.title,
-                "description": entry.description,
-                "director": entry.director,
-                "writers": entry.writers,
-                "actors": entry.actors,
-                "actors_names": entry.actors_names,
-                "writers_names": entry.writers_names,
-            }
+            entry_template = self.entry_template_func(entry=entry)
             out.append(index_template)
             out.append(entry_template)
 

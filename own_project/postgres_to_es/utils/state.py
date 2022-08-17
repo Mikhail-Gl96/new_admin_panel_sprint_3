@@ -18,7 +18,7 @@ class BaseStorage:
 
 
 class JsonFileStorage(BaseStorage):
-    def __init__(self, file_path: Optional[str] = None):
+    def __init__(self, file_path: Optional[str] = None) -> None:
         self.file_path = file_path
 
     @staticmethod
@@ -44,7 +44,7 @@ class State:
     В целом ничего не мешает поменять это поведение на работу с БД или распределённым хранилищем.
     """
 
-    def __init__(self, storage: BaseStorage):
+    def __init__(self, storage: BaseStorage) -> None:
         self.storage = storage
 
     def set_state(self, key: str, value: Any) -> None:
